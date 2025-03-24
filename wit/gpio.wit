@@ -32,7 +32,6 @@ interface general {
 
 interface digital {
     use general.{gpio-error, pin-mode, active-level, pull-resistor};
-    use wasi:io/poll@0.2.4.{pollable};
 
     // Enum that describes the state of a digital pin, active meaning the pin is driven by the controller
     // Some gpio pin controllers allow pins to be configured active high or active low
@@ -63,9 +62,6 @@ interface digital {
         // Returns the configuration of the gpio this resource is tied to
         get-config: func() -> digital-config;
 
-        // A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
-        watch-for-ready: func() -> pollable;
-
         // Sets the pin to a specific state
         set-state: func(state: pin-state) -> result<_, gpio-error>;
 
@@ -83,9 +79,6 @@ interface digital {
         // Returns the configuration of the gpio this resource is tied to
         get-config: func() -> digital-config;
 
-        // A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
-        watch-for-ready: func() -> pollable;
-
         // Returns the pin state
         read: func() -> result<pin-state, gpio-error>;
 
@@ -93,18 +86,6 @@ interface digital {
         is-active: func() -> result<bool, gpio-error>;
         // Returns if the pin is in the inactive state
         is-inactive: func() -> result<bool, gpio-error>;
-
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever the desired state is reached
-        watch-state: func(state: pin-state) -> result<pollable, gpio-error>;
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever the active state is reached
-        watch-active: func() -> result<pollable, gpio-error>;
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever the inactive state is reached
-        watch-inactive: func() -> result<pollable, gpio-error>;
-
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever a falling edge happened, a falling edge is the transition from 'active' to 'inactive'
-        watch-falling-edge: func() -> result<pollable, gpio-error>;
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever a falling edge happened, a falling edge is the transition from 'inactive' to 'active'
-        watch-rising-edge: func() -> result<pollable, gpio-error>;
     }
 
     // Digital Input Pin resource, describes the functionality of a general digital input pin
@@ -112,9 +93,6 @@ interface digital {
     resource digital-in-out-pin {
         // Returns the configuration of the gpio this resource is tied to
         get-config: func() -> digital-config;
-
-        // A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
-        watch-for-ready: func() -> pollable;
 
         // Sets the pin to a specific state
         set-state: func(state: pin-state) -> result<_, gpio-error>;
@@ -133,32 +111,19 @@ interface digital {
         is-active: func() -> result<bool, gpio-error>;
         // Returns if the pin is in the inactive state
         is-inactive: func() -> result<bool, gpio-error>;
-
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever the desired state is reached
-        watch-state: func(state: pin-state) -> result<pollable, gpio-error>;
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever the active state is reached
-        watch-active: func() -> result<pollable, gpio-error>;
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever the inactive state is reached
-        watch-inactive: func() -> result<pollable, gpio-error>;
-
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever a falling edge happened, a falling edge is the transition from 'active' to 'inactive'
-        watch-falling-edge: func() -> result<pollable, gpio-error>;
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever a falling edge happened, a falling edge is the transition from 'inactive' to 'active'
-        watch-rising-edge: func() -> result<pollable, gpio-error>;
     }
 
     // Functions to acquire certain GPIO pins configured in the desired mode
     // These functions can also be used for pins that are allowed to change mode, if pin 1 was an input but can also be an output,
     // calling get-digital-out will return a digital-out-pin tied to that specific pin and the earlier acquired resource will
     // return error types when it's methods are being invoked
-    //get-digital-in: func(pin-label: string, %flags: list<digital-flags>) -> result<digital-in-pin, gpio-error>;
-    //get-digital-out: func(pin-label: string, %flags: list<digital-flags>) -> result<digital-out-pin, gpio-error>;
-    //get-digital-in-out: func(pin-label: string, %flags: list<digital-flags>) -> result<digital-in-out-pin, gpio-error>;
+    get-digital-in: func(pin-label: string, %flags: list<digital-flags>) -> result<digital-in-pin, gpio-error>;
+    get-digital-out: func(pin-label: string, %flags: list<digital-flags>) -> result<digital-out-pin, gpio-error>;
+    get-digital-in-out: func(pin-label: string, %flags: list<digital-flags>) -> result<digital-in-out-pin, gpio-error>;
 }
 
 interface analog {
     use general.{gpio-error, pin-mode};
-    use wasi:io/poll@0.2.4.{pollable};
 
     record analog-config {
         label: string,
@@ -173,9 +138,6 @@ interface analog {
     resource analog-out-pin {
         // Returns the configuration of the gpio this resource is tied to
         get-config: func() -> analog-config;
-
-        // A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
-        watch-for-ready: func() -> pollable;
 
         // Sets the PWM value of the pin according to the input value, the value depends on if the pin is active high or active low
         // The value has sufficient margin to also support 32 bit DAC's, when used with a lower resolution DAC, all value above that resolution will represent a fully active state
@@ -193,9 +155,6 @@ interface analog {
         // Returns the configuration of the gpio this resource is tied to
         get-config: func() -> analog-config;
 
-        // A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
-        watch-for-ready: func() -> pollable;
-
         // Read the raw value the ADC returns, the value depends on if the pin is active high or active low
         // The value has sufficient margin to also support 32 bit ADC's, when used with a lower resolution ADC, the maximum value returned will be the maximum value the ADC can return
         // If the pin is active high, higher values mean higher voltage
@@ -206,35 +165,11 @@ interface analog {
         // If the pin is active high, higher values mean higher voltage
         // If the pin is active low, higher values mean lower voltage
         read: func() -> result<f32, gpio-error>;
-
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever the voltage level is above a certain value, above has different meanings if the gpio is active high or active low
-        // Value describes a value the ADC can return and has sufficient margin to also support 32 bit ADC's, when used with a lower resolution ADC, all values above the limit of the ADC will be considered as watching for the fully active state
-        // If the pin is active high, above means that the voltage is higher than the voltage value describes
-        // If the pin is active low, above means that the voltage is lower than the voltage value describes
-        watch-above-raw: func(value: u32) -> result<pollable, gpio-error>;
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever the voltage level is above a certain value, above has different meanings if the gpio is active high or active low
-        // The value describes a fraction of the fully active state, so the value must lie in the interval [0.0, 1.0] with 0.0 meaning fully inactive, 1.0 meaning fully active and 0.5 laying in the middle between fully inactive and fully active
-        // If the pin is active high, above means that the voltage is higher than the voltage value describes
-        // If the pin is active low, above means that the voltage is lower than the voltage value describes
-        watch-above: func(value: f32) -> result<pollable, gpio-error>;
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever the voltage level is below a certain value, below has different meanings if the gpio is active high or active low
-        // Value describes a value the ADC can return and has sufficient margin to also support 32 bit ADC's, when used with a lower resolution ADC, all values above the limit of the ADC will be considered as watching for the fully active state
-        // If the pin is active high, below means that the voltage is lower than the voltage value describes
-        // If the pin is active low, below means that the voltage is higher than the voltage value describes
-        watch-below-raw: func(value: u32) -> result<pollable, gpio-error>;
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever the voltage level is below a certain value, below has different meanings if the gpio is active high or active low
-        // The value describes a fraction of the fully active state, so the value must lie in the interval [0.0, 1.0] with 0.0 meaning fully inactive, 1.0 meaning fully active and 0.5 laying in the middle between fully inactive and fully active
-        // If the pin is active high, below means that the voltage is lower than the voltage value describes
-        // If the pin is active low, below means that the voltage is higher than the voltage value describes
-        watch-below: func(value: f32) -> result<pollable, gpio-error>;
     }
 
     resource analog-in-out-pin {
         // Returns the configuration of the gpio this resource is tied to
         get-config: func() -> analog-config;
-
-        // A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
-        watch-for-ready: func() -> pollable;
 
         // Sets the PWM value of the pin according to the input value, the value depends on if the pin is active high or active low
         // The value has sufficient margin to also support 32 bit DAC's, when used with a lower resolution DAC, all value above that resolution will represent a fully active state
@@ -257,34 +192,13 @@ interface analog {
         // If the pin is active high, higher values mean higher voltage
         // If the pin is active low, higher values mean lower voltage
         read: func() -> result<f32, gpio-error>;
-
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever the voltage level is above a certain value, above has different meanings if the gpio is active high or active low
-        // Value describes a value the ADC can return and has sufficient margin to also support 32 bit ADC's, when used with a lower resolution ADC, all values above the limit of the ADC will be considered as watching for the fully active state
-        // If the pin is active high, above means that the voltage is higher than the voltage value describes
-        // If the pin is active low, above means that the voltage is lower than the voltage value describes
-        watch-above-raw: func(value: u32) -> result<pollable, gpio-error>;
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever the voltage level is above a certain value, above has different meanings if the gpio is active high or active low
-        // The value describes a fraction of the fully active state, so the value must lie in the interval [0.0, 1.0] with 0.0 meaning fully inactive, 1.0 meaning fully active and 0.5 laying in the middle between fully inactive and fully active
-        // If the pin is active high, above means that the voltage is higher than the voltage value describes
-        // If the pin is active low, above means that the voltage is lower than the voltage value describes
-        watch-above: func(value: f32) -> result<pollable, gpio-error>;
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever the voltage level is below a certain value, below has different meanings if the gpio is active high or active low
-        // Value describes a value the ADC can return and has sufficient margin to also support 32 bit ADC's, when used with a lower resolution ADC, all values above the limit of the ADC will be considered as watching for the fully active state
-        // If the pin is active high, below means that the voltage is lower than the voltage value describes
-        // If the pin is active low, below means that the voltage is higher than the voltage value describes
-        watch-below-raw: func(value: u32) -> result<pollable, gpio-error>;
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever the voltage level is below a certain value, below has different meanings if the gpio is active high or active low
-        // The value describes a fraction of the fully active state, so the value must lie in the interval [0.0, 1.0] with 0.0 meaning fully inactive, 1.0 meaning fully active and 0.5 laying in the middle between fully inactive and fully active
-        // If the pin is active high, below means that the voltage is lower than the voltage value describes
-        // If the pin is active low, below means that the voltage is higher than the voltage value describes
-        watch-below: func(value: f32) -> result<pollable, gpio-error>;
     }
 
     // Functions to acquire certain GPIO pins configured in the desired mode
     // These functions can also be used for pins that are allowed to change mode, if pin 1 was an input but can also be an output,
     // calling get-analog-out will return a analog-out-pin tied to that specific pin and the earlier acquired resource will
     // return error types when it's methods are being invoked
-    //get-analog-in: func(pin-label: string, %flags: list<analog-flags>) -> result<analog-in-pin, gpio-error>;
-    //get-analog-out: func(pin-label: string, %flags: list<analog-flags>) -> result<analog-out-pin, gpio-error>;
-    //get-analog-in-out: func(pin-label: string, %flags: list<analog-flags>) -> result<analog-in-out-pin, gpio-error>;
+    get-analog-in: func(pin-label: string, %flags: list<analog-flags>) -> result<analog-in-pin, gpio-error>;
+    get-analog-out: func(pin-label: string, %flags: list<analog-flags>) -> result<analog-out-pin, gpio-error>;
+    get-analog-in-out: func(pin-label: string, %flags: list<analog-flags>) -> result<analog-in-out-pin, gpio-error>;
 }
