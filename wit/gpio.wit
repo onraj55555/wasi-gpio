@@ -2,28 +2,48 @@ package wasi:gpio@0.2.0;
 
 interface general {
     variant gpio-error {
-        hardware-fault, // Chip controller cannot access the pin (e.g. pin is blown)
-        already-in-use, // Pin is already in use by another process
-        pin-not-allowed, // Policy does not allow this pin to be used at all
-        pin-mode-not-allowed, // Pin is usable but not in the specified mode, specified by the policy
-        undefined-pin-label, // A pin with that label does not exist on the system (e.g. GPIOINVALID)
-        pin-mode-not-available, // The pin mode does not exist for that pin (e.g. PWM mode for a purely digital pin)
-        would-block, // The function would block if used in an interrupt context
-        operation-not-supported, // Mostly here to have a better error for the pollable functions because this cannot be implemented everywhere
-        other(string) // Unspecified error, error message might give hints but not guaranteed
+        /// Chip controller cannot access the pin (e.g. pin is blown)
+        hardware-fault,
+
+        /// Pin is already in use by another process
+        already-in-use,
+
+        /// Policy does not allow this pin to be used at all
+        pin-not-allowed,
+
+        /// Pin is usable but not in the specified mode, specified by the policy
+        pin-mode-not-allowed,
+
+        /// A pin with that label does not exist on the system (e.g. GPIOINVALID)
+        undefined-pin-label,
+
+        /// The pin mode does not exist for that pin (e.g. PWM mode for a purely digital pin)
+        pin-mode-not-available,
+
+        /// The function would block if used in an interrupt context
+        would-block,
+
+        /// Mostly here to have a better error for the pollable functions because this cannot be implemented everywhere
+        operation-not-supported,
+        
+        /// Unspecified error, error message might give hints but not guaranteed
+        other(string)
     }
 
+    /// Configured activity level of the pin, active-high means Vmax is a binary 1
     enum active-level {
         active-high,
         active-low,
     }
 
+    /// Configured pin mode of the pin
     enum pin-mode {
         in,
         out,
         in-out
     }
 
+    // Configured pull resistor mode of the pin, pull-up means that the pin internally is tied to Vmax via a resistor
     enum pull-resistor {
         pull-up,
         pull-down,
@@ -32,12 +52,14 @@ interface general {
 
 interface digital {
     use general.{gpio-error, pin-mode, active-level, pull-resistor};
-    use wasi:io/poll@0.2.4.{pollable};
+    //use wasi:io/poll@0.2.4.{pollable};
 
-    // Enum that describes the state of a digital pin, active meaning the pin is driven by the controller
-    // Some gpio pin controllers allow pins to be configured active high or active low
-    // Active high means that when a pin is active, the voltage on that pin is equivalent to a binary 1 and inactive is equivalent to a binary 0
-    // Active low is vice versa
+    /**
+     * Enum that describes the state of a digital pin, active meaning the pin is driven by the controller
+     * Some gpio pin controllers allow pins to be configured active high or active low
+     * Active high means that when a pin is active, the voltage on that pin is equivalent to a binary 1 and inactive is equivalent to a binary 0
+     * Active low is vice versa
+    */
     enum pin-state {
         active,
         inactive
@@ -50,115 +72,158 @@ interface digital {
         pull-resistor: option<pull-resistor>,
     }
 
+    /// Flags to configure the runtime beheviour of pin resources
     flags digital-flags {
+        /// Tells the driver to configure the pin to be active high
         active-high,
+
+        /// Tells the driver to configure the pin to be active low
         active-low,
+
+        /// Tells the driver to configure the pin to have an internal pull-up resistor tied to it
+        /// 
+        /// 
+        /// 
         pull-up,
         pull-down
     }
 
-    // Digital Output Pin resource, describes the functionality of a general digital output pin
-    // Sets the pin state to 'active' or 'inactive'
+    /**
+     * Digital Output Pin resource, describes the functionality of a general digital output pin
+     * Sets the pin state to 'active' or 'inactive'
+    */
     resource digital-out-pin {
-        // Returns the configuration of the gpio this resource is tied to
+        /// Returns the configuration of the gpio this resource is tied to
         get-config: func() -> digital-config;
 
-        // A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
-        watch-for-ready: func() -> pollable;
+        /// A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
+        //watch-for-ready: func() -> pollable;
 
-        // Sets the pin to a specific state
+        /// A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
+        /// Will also return false whenever the resource is being invalidated
+        is-ready: func() -> bool;
+
+        /// Sets the pin to a specific state
         set-state: func(state: pin-state) -> result<_, gpio-error>;
 
-        // Sets the pin to the active state
+        /// Sets the pin to the active state
         set-active: func() -> result<_, gpio-error>;
-        // Sets the pin to the inactive state
+        /// Sets the pin to the inactive state
         set-inactive: func() -> result<_, gpio-error>;
-        // Toggles the pin state
+        /// Toggles the pin state
         toggle: func() -> result<_, gpio-error>;
+
+        /// Returns if the pin is set active, which is not the same as mearusing if the pin is active
+        is-set-active: func() -> result<_, gpio-error>
+        /// Returns if the pin is set inactive, which is not the same as mearusing if the pin is inactive
+        is-set-inactive: func() -> result<_, gpio-error>
+        /// Returns the current state in which the pin is set to
+        get-state: func() -> result<pin-state, gpio-error>
     }
 
-    // Digital Input Pin resource, describes the functionality of a general digital input pin
-    // Reads the pin and outputs 'high' or 'low'
+    /**
+     * Digital Input Pin resource, describes the functionality of a general digital input pin
+     * Reads the pin and outputs 'high' or 'low'
+    */
     resource digital-in-pin {
-        // Returns the configuration of the gpio this resource is tied to
+        /// Returns the configuration of the gpio this resource is tied to
         get-config: func() -> digital-config;
 
-        // A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
-        watch-for-ready: func() -> pollable;
+        /// A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
+        //watch-for-ready: func() -> pollable;
 
-        // Returns the pin state
+        /// A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
+        /// Will also return false whenever the resource is being invalidated
+        is-ready: func() -> bool;
+
+        /// Returns the pin state
         read: func() -> result<pin-state, gpio-error>;
 
-        // Returns if the pin is in the active state
+        /// Returns if the pin is in the active state
         is-active: func() -> result<bool, gpio-error>;
-        // Returns if the pin is in the inactive state
+        /// Returns if the pin is in the inactive state
         is-inactive: func() -> result<bool, gpio-error>;
 
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever the desired state is reached
-        watch-state: func(state: pin-state) -> result<pollable, gpio-error>;
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever the active state is reached
-        watch-active: func() -> result<pollable, gpio-error>;
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever the inactive state is reached
-        watch-inactive: func() -> result<pollable, gpio-error>;
+        /// Returns a pollable if this function succeeds, the pollable will be ready whenever the desired state is reached
+        //watch-state: func(state: pin-state) -> result<pollable, gpio-error>;
+        /// Returns a pollable if this function succeeds, the pollable will be ready whenever the active state is reached
+        //watch-active: func() -> result<pollable, gpio-error>;
+        /// Returns a pollable if this function succeeds, the pollable will be ready whenever the inactive state is reached
+        //watch-inactive: func() -> result<pollable, gpio-error>;
 
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever a falling edge happened, a falling edge is the transition from 'active' to 'inactive'
-        watch-falling-edge: func() -> result<pollable, gpio-error>;
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever a falling edge happened, a falling edge is the transition from 'inactive' to 'active'
-        watch-rising-edge: func() -> result<pollable, gpio-error>;
+        /// Returns a pollable if this function succeeds, the pollable will be ready whenever a falling edge happened, a falling edge is the transition from 'active' to 'inactive'
+        //watch-falling-edge: func() -> result<pollable, gpio-error>;
+        /// Returns a pollable if this function succeeds, the pollable will be ready whenever a falling edge happened, a falling edge is the transition from 'inactive' to 'active'
+        //watch-rising-edge: func() -> result<pollable, gpio-error>;
     }
 
-    // Digital Input Pin resource, describes the functionality of a general digital input pin
-    // Reads the pin and outputs 'high' or 'low'
+    /**
+     * Digital Input Output Pin resource, describes the functionality of a general digital input out pin
+     * This pin can be have as an input and an output pin
+    */
     resource digital-in-out-pin {
-        // Returns the configuration of the gpio this resource is tied to
+        /// Returns the configuration of the gpio this resource is tied to
         get-config: func() -> digital-config;
 
-        // A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
-        watch-for-ready: func() -> pollable;
+        /// A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
+        //watch-for-ready: func() -> pollable;
 
-        // Sets the pin to a specific state
+        /// A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
+        /// Will also return false whenever the resource is being invalidated
+        is-ready: func() -> bool;
+
+        /// Sets the pin to a specific state
         set-state: func(state: pin-state) -> result<_, gpio-error>;
 
-        // Sets the pin to the active state
+        /// Sets the pin to the active state
         set-active: func() -> result<_, gpio-error>;
-        // Sets the pin to the inactive state
+        /// Sets the pin to the inactive state
         set-inactive: func() -> result<_, gpio-error>;
-        // Toggles the pin state
+        /// Toggles the pin state
         toggle: func() -> result<_, gpio-error>;
 
-        // Returns the pin state
+        /// Returns if the pin is set active, which is not the same as mearusing if the pin is active
+        is-set-active: func() -> result<_, gpio-error>
+        /// Returns if the pin is set inactive, which is not the same as mearusing if the pin is inactive
+        is-set-inactive: func() -> result<_, gpio-error>
+        /// Returns the current state in which the pin is set to
+        get-state: func() -> result<pin-state, gpio-error>
+
+        /// Returns the pin state
         read: func() -> result<pin-state, gpio-error>;
 
-        // Returns if the pin is in the active state
+        /// Returns if the pin is in the active state
         is-active: func() -> result<bool, gpio-error>;
-        // Returns if the pin is in the inactive state
+        /// Returns if the pin is in the inactive state
         is-inactive: func() -> result<bool, gpio-error>;
 
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever the desired state is reached
-        watch-state: func(state: pin-state) -> result<pollable, gpio-error>;
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever the active state is reached
-        watch-active: func() -> result<pollable, gpio-error>;
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever the inactive state is reached
-        watch-inactive: func() -> result<pollable, gpio-error>;
+        /// Returns a pollable if this function succeeds, the pollable will be ready whenever the desired state is reached
+        //watch-state: func(state: pin-state) -> result<pollable, gpio-error>;
+        /// Returns a pollable if this function succeeds, the pollable will be ready whenever the active state is reached
+        //watch-active: func() -> result<pollable, gpio-error>;
+        /// Returns a pollable if this function succeeds, the pollable will be ready whenever the inactive state is reached
+        //watch-inactive: func() -> result<pollable, gpio-error>;
 
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever a falling edge happened, a falling edge is the transition from 'active' to 'inactive'
-        watch-falling-edge: func() -> result<pollable, gpio-error>;
-        // Returns a pollable if this function succeeds, the pollable will be ready whenever a falling edge happened, a falling edge is the transition from 'inactive' to 'active'
-        watch-rising-edge: func() -> result<pollable, gpio-error>;
+        /// Returns a pollable if this function succeeds, the pollable will be ready whenever a falling edge happened, a falling edge is the transition from 'active' to 'inactive'
+        //watch-falling-edge: func() -> result<pollable, gpio-error>;
+        /// Returns a pollable if this function succeeds, the pollable will be ready whenever a falling edge happened, a falling edge is the transition from 'inactive' to 'active'
+        //watch-rising-edge: func() -> result<pollable, gpio-error>;
     }
 
-    // Functions to acquire certain GPIO pins configured in the desired mode
-    // These functions can also be used for pins that are allowed to change mode, if pin 1 was an input but can also be an output,
-    // calling get-digital-out will return a digital-out-pin tied to that specific pin and the earlier acquired resource will
-    // return error types when it's methods are being invoked
-    //get-digital-in: func(pin-label: string, %flags: list<digital-flags>) -> result<digital-in-pin, gpio-error>;
-    //get-digital-out: func(pin-label: string, %flags: list<digital-flags>) -> result<digital-out-pin, gpio-error>;
-    //get-digital-in-out: func(pin-label: string, %flags: list<digital-flags>) -> result<digital-in-out-pin, gpio-error>;
+    /**
+     * Functions to acquire certain GPIO pins configured in the desired mode
+     * These functions can also be used for pins that are allowed to change mode, if pin 1 was an input but can also be an output,
+     * calling get-digital-out will return a digital-out-pin tied to that specific pin and the earlier acquired resource will
+     * return error types when it's methods are being invoked
+    */
+    get-digital-in: func(pin-label: string, %flags: list<digital-flags>) -> result<digital-in-pin, gpio-error>;
+    get-digital-out: func(pin-label: string, %flags: list<digital-flags>) -> result<digital-out-pin, gpio-error>;
+    get-digital-in-out: func(pin-label: string, %flags: list<digital-flags>) -> result<digital-in-out-pin, gpio-error>;
 }
 
 interface analog {
     use general.{gpio-error, pin-mode};
-    use wasi:io/poll@0.2.4.{pollable};
+    //use wasi:io/poll@0.2.4.{pollable};
 
     record analog-config {
         label: string,
