@@ -124,7 +124,7 @@ interface digital {
         get: static func(pin-label: string, %flags: list<digital-flag>) -> result<digital-out-pin, gpio-error>;
     
         /// Returns the configuration of the gpio this resource is tied to
-        get-config: func() -> digital-config;
+        get-config: func() -> result<digital-config, gpio-error>;
 
         /// A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
         /// Will also return false whenever the resource is being invalidated
@@ -149,7 +149,7 @@ interface digital {
         get: static func(pin-label: string, %flags: list<digital-flag>) -> result<stateful-digital-out-pin, gpio-error>;
     
         /// Returns the configuration of the gpio this resource is tied to
-        get-config: func() -> digital-config;
+        get-config: func() -> result<digital-config, gpio-error>;
 
         /// A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
         /// Will also return false whenever the resource is being invalidated
@@ -184,7 +184,7 @@ interface digital {
         get: static func(pin-label: string, %flags: list<digital-flag>) -> result<digital-in-pin, gpio-error>;
     
         /// Returns the configuration of the gpio this resource is tied to
-        get-config: func() -> digital-config;
+        get-config: func() -> result<digital-config, gpio-error>;
 
         /// A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
         /// Will also return false whenever the resource is being invalidated
@@ -221,7 +221,7 @@ interface digital {
         get: static func(pin-label: string, %flags: list<digital-flag>) -> result<digital-in-out-pin, gpio-error>;
     
         /// Returns the configuration of the gpio this resource is tied to
-        get-config: func() -> digital-config;
+        get-config: func() -> result<digital-config, gpio-error>;
 
         /// A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
         /// Will also return false whenever the resource is being invalidated
