@@ -28,6 +28,12 @@ interface general {
         
         /// Gets returned when clashing flags are detected (e.g. active-high and active-low together) or when a certain flag is not supported by the type (e.g. pull-resistor in digital-out-pin)
         invalid-flag,
+
+        /// Gets returned when certain flags are missing (e.g. active-level flag), 
+        missing-flags,
+
+        /// Gets returned when a function on an invalidated resource gets called (e.g. when modechange happens)
+        resource-invalidated,
         
         /// Unspecified error, error message might give hints but not guaranteed
         other(string)
