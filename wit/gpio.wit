@@ -28,6 +28,12 @@ interface general {
         
         /// Gets returned when clashing flags are detected (e.g. active-high and active-low together) or when a certain flag is not supported by the type (e.g. pull-resistor in digital-out-pin)
         invalid-flag,
+
+        /// Gets returned when certain flags are missing (e.g. active-level flag), 
+        missing-flags,
+
+        /// Gets returned when a function on an invalidated resource gets called (e.g. when modechange happens)
+        resource-invalidated,
         
         /// Unspecified error, error message might give hints but not guaranteed
         other(string)
@@ -123,7 +129,7 @@ interface digital {
         get: static func(pin-label: string, %flags: list<digital-flag>) -> result<digital-out-pin, gpio-error>;
     
         /// Returns the configuration of the gpio this resource is tied to
-        get-config: func() -> digital-config;
+        get-config: func() -> result<digital-config, gpio-error>;
 
         /// A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
         /// Will also return false whenever the resource is being invalidated
@@ -148,7 +154,7 @@ interface digital {
         get: static func(pin-label: string, %flags: list<digital-flag>) -> result<stateful-digital-out-pin, gpio-error>;
     
         /// Returns the configuration of the gpio this resource is tied to
-        get-config: func() -> digital-config;
+        get-config: func() -> result<digital-config, gpio-error>;
 
         /// A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
         /// Will also return false whenever the resource is being invalidated
@@ -183,7 +189,7 @@ interface digital {
         get: static func(pin-label: string, %flags: list<digital-flag>) -> result<digital-in-pin, gpio-error>;
     
         /// Returns the configuration of the gpio this resource is tied to
-        get-config: func() -> digital-config;
+        get-config: func() -> result<digital-config, gpio-error>;
 
         /// A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
         /// Will also return false whenever the resource is being invalidated
@@ -220,7 +226,7 @@ interface digital {
         get: static func(pin-label: string, %flags: list<digital-flag>) -> result<digital-in-out-pin, gpio-error>;
     
         /// Returns the configuration of the gpio this resource is tied to
-        get-config: func() -> digital-config;
+        get-config: func() -> result<digital-config, gpio-error>;
 
         /// A function to be sure that a GPIO is ready to be used because initialisation time can vary for drivers
         /// Will also return false whenever the resource is being invalidated
